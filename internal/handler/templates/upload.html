@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PXL — Upload</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<script src="/static/pxl-session.js"></script>
+<script src="/static/pxl-upload.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.5rem;background:#161b22;border-bottom:1px solid #21262d}
+.navbar .logo{color:#58a6ff;text-decoration:none;font-weight:700;font-size:1.2rem}
+.navbar .nav-links{display:flex;gap:1rem;align-items:center}
+.navbar .nav-links a{color:#8b949e;text-decoration:none;font-size:.9rem;transition:color .2s}
+.navbar .nav-links a:hover{color:#c9d1d9}
+.navbar .nav-links a.active{color:#58a6ff}
+.nav-user{display:flex;align-items:center;gap:.7rem}
+.nav-user .username{color:#c9d1d9;font-size:.85rem;font-weight:500}
+.btn-nav{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:.35rem .7rem;border-radius:6px;font-size:.8rem;cursor:pointer;text-decoration:none;transition:all .2s}
+.btn-nav:hover{background:#30363d;border-color:#484f58}
+.btn-nav-primary{background:#238636;color:#fff;border-color:#238636}
+.btn-nav-primary:hover{background:#2ea043}
+.content{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem}
+.container{max-width:700px;width:100%}
+h1{font-size:2.5rem;font-weight:700;margin-bottom:.5rem;color:#58a6ff}
+h1 span{color:#c9d1d9;font-weight:300}
+.subtitle{color:#8b949e;margin-bottom:2rem;font-size:.95rem}
+.drop-zone{border:2px dashed #30363d;border-radius:12px;padding:4rem 2rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:#161b22}
+.drop-zone:hover,.drop-zone.dragover{border-color:#58a6ff;background:#1c2333}
+.drop-zone .icon{font-size:3rem;margin-bottom:1rem;display:block}
+.drop-zone p{color:#8b949e;font-size:1rem}
+.drop-zone .browse{color:#58a6ff;text-decoration:underline;cursor:pointer}
+.drop-zone input{display:none}
+.progress-container{display:none;margin-top:1.5rem}
+.progress-bar{height:6px;background:#21262d;border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:#58a6ff;width:0%;transition:width .3s}
+.progress-text{color:#8b949e;font-size:.85rem;margin-top:.5rem;text-align:center}
+.result{display:none;margin-top:2rem;background:#161b22;border:1px solid #30363d;border-radius:12px;padding:1.5rem;animation:fadeIn .3s}
+.result-img{max-width:100%;max-height:300px;border-radius:8px;margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto}
+.result-links{display:flex;flex-direction:column;gap:.5rem}
+.result-row{display:flex;align-items:center;gap:.5rem}
+.result-row label{color:#8b949e;font-size:.8rem;min-width:80px}
+.result-row input{flex:1;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:.5rem .7rem;border-radius:6px;font-size:.85rem;font-family:monospace}
+.btn{background:#238636;color:#fff;border:none;padding:.5rem 1rem;border-radius:6px;font-size:.85rem;cursor:pointer;transition:background .2s}
+.btn:hover{background:#2ea043}
+.btn-copy{background:#30363d;color:#c9d1d9}.btn-copy:hover{background:#484f58}
+.btn-del{background:#da3633;color:#fff}.btn-del:hover{background:#f85149}
+.actions{display:flex;gap:.5rem;margin-top:1rem;justify-content:flex-end}
+.toast{position:fixed;bottom:2rem;right:2rem;background:#238636;color:#fff;padding:.7rem 1.2rem;border-radius:8px;font-size:.85rem;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.multi-results{display:flex;flex-direction:column;gap:1rem}
+.guest-notice{background:#21262d;border:1px solid #30363d;border-radius:8px;padding:.8rem 1rem;margin-bottom:1.5rem;font-size:.85rem;color:#8b949e;display:none}
+.guest-notice a{color:#58a6ff}
+.upload-options{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem;align-items:center}
+.upload-options input[type=text]{flex:1;min-width:160px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:.6rem}
+.import-report{white-space:pre-wrap;overflow-wrap:anywhere;color:#8b949e;font-size:.85rem;margin-top:1rem;max-height:240px;overflow:auto}
+.result-row input{min-width:0}
+@media(max-width:600px){.content{padding:1rem}.navbar{padding:.8rem;flex-wrap:wrap;gap:.7rem}.navbar .nav-links{flex-wrap:wrap}.drop-zone{padding:2rem 1rem}.result{padding:1rem}.result-row{flex-wrap:wrap}.result-row label{min-width:55px}}
+footer{text-align:center;padding:1rem;color:#484f58;font-size:.8rem}
+footer a{color:#58a6ff}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a class="logo" href="/">PXL</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<div class="content">
+  <div class="container">
+    <h1>PXL<span>.upload</span></h1>
+    <p class="subtitle">Déposez, collez ou sélectionnez des images — partage instantané</p>
+    <p class="subtitle">Les originaux sont publics par lien et conservent leurs métadonnées, notamment EXIF/GPS. Retirez les données sensibles avant l'envoi.</p>
+
+    <div class="guest-notice" id="guestNotice">
+      💡 <a href="/login">Connectez-vous</a> ou <a href="/login">créez un compte</a> pour retrouver vos images, les gérer et les organiser.
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <span class="icon">📸</span>
+      <p>Glissez-déposez vos images ou dossiers ici</p>
+      <div class="upload-options" style="justify-content:center">
+        <button class="btn" id="browseBtn" type="button">Choisir des images</button>
+        <button class="btn btn-copy" id="folderBtn" type="button">Choisir un dossier</button>
+      </div>
+      <p style="margin-top:.5rem;color:#484f58;font-size:.8rem">Le collage depuis le presse-papier fonctionne aussi (Ctrl+V)</p>
+      <input type="file" id="fileInput" accept="image/*" multiple>
+      <input type="file" id="folderInput" webkitdirectory multiple>
+    </div>
+    <div class="upload-options">
+      <label for="albumTitle">Nom de l'album</label>
+      <input type="text" id="albumTitle" placeholder="Automatique (date ou nom du dossier)" maxlength="150">
+    </div>
+    <p class="import-report">Envoi par petits lots. Un album par sélection ou dossier racine, sous-dossiers inclus, pour les comptes connectés. Au-delà de 1 000 images, plusieurs albums numérotés sont créés. Les quotas du compte restent applicables.</p>
+
+    <div class="progress-container" id="progress">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText" role="status" aria-live="polite">Upload en cours...</div>
+      <button class="btn btn-copy" id="stopUpload" type="button">Arrêter après le lot en cours</button>
+    </div>
+    <div class="import-report" id="importReport" role="status"></div>
+
+    <div class="multi-results" id="results"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copié !</div>
+<footer>PXL — Hébergement d'images auto-hébergé</footer>
+
+<script nonce="{{.Nonce}}">
+const BASE = '{{.BaseURL}}';
+const allowAnonymous = {{.AllowAnonymous}};
+const uploadPolicy = {maxSize: {{.MaxSize}}, maxFiles: {{.MaxFiles}}, allowedTypes: {{.AllowedTypes}}};
+
+function esc(value) {
+  return PXLSession.escapeHTML(value);
+}
+
+function uploadUser() {
+  return PXLSession.request('/api/v1/auth/me').then(response => {
+    if (response.status === 401) return null;
+    if (!response.ok) throw new Error('Session non vérifiée (HTTP ' + response.status + '). Réessayez la sélection dans un instant.');
+    return response.json();
+  });
+}
+
+// ── Navbar ──
+async function updateNav() {
+  const nav = document.getElementById('navLinks');
+  const user = await uploadUser();
+  let h = '<a href="/" class="active">Upload</a>';
+  if (user) {
+    h += '<a href="/gallery">Mes images</a>';
+    h += '<a href="/account">Mon compte</a>';
+    if (user.role === 'admin') h += '<a href="/admin">Admin</a>';
+    h += '<span class="nav-user"><span class="username">' + esc(user.username) + '</span>';
+    h += '<button class="btn-nav" id="btn-logout">Déconnexion</button></span>';
+  } else {
+    h += '<a href="/login" class="btn-nav btn-nav-primary">Connexion</a>';
+  }
+  nav.innerHTML = h;
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+  return user;
+}
+async function logout() {
+  await PXLSession.logout();
+  window.location.reload();
+}
+const navReady = updateNav().then(user => {
+  if (!user && allowAnonymous) document.getElementById('guestNotice').style.display = 'block';
+}).catch(error => { document.getElementById('importReport').textContent = error.message; });
+
+// ── Upload ──
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const folderInput = document.getElementById('folderInput');
+const progressEl = document.getElementById('progress');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const resultsEl = document.getElementById('results');
+const reportEl = document.getElementById('importReport');
+let queue = Promise.resolve();
+let stopped = false;
+let generation = 0;
+let queueStop = new AbortController();
+let uploaded = 0;
+let total = 0;
+
+document.getElementById('stopUpload').addEventListener('click', () => {
+  stopped = true;
+  generation++;
+  queueStop.abort();
+  queueStop = new AbortController();
+  progressText.textContent = 'Arrêt demandé : le lot en cours sera conservé et regroupé en album si possible.';
+});
+
+document.getElementById('browseBtn').addEventListener('click', () => fileInput.click());
+document.getElementById('folderBtn').addEventListener('click', () => folderInput.click());
+if (!('webkitdirectory' in folderInput)) {
+  document.getElementById('folderBtn').disabled = true;
+  document.getElementById('folderBtn').title = 'Sélection de dossiers non disponible dans ce navigateur. Utilisez Chrome ou Edge.';
+}
+
+function enqueue(entries) {
+  progressEl.style.display = 'block';
+  const current = generation;
+  const explicitTitle = document.getElementById('albumTitle').value.trim();
+  const title = 'Album ' + new Date().toLocaleString('fr-FR');
+  // Serialize selections as well as requests; a second drop must not race the first.
+  const signal = queueStop.signal;
+  const collected = new Promise(resolve => {
+    const cancel = () => resolve({cancelled: true});
+    signal.addEventListener('abort', cancel, {once: true});
+    Promise.resolve(entries).then(files => resolve({files}), error => resolve({error}))
+      .finally(() => signal.removeEventListener('abort', cancel));
+  });
+  queue = queue.then(async () => {
+    if (current !== generation) return;
+    const result = await collected;
+    if (current !== generation) return;
+    if (result.error) throw new Error('Lecture du dossier impossible : ' + result.error.message);
+    stopped = false;
+    await uploadFiles(result.files, title, explicitTitle);
+  }).catch(error => { reportEl.textContent = error.message; });
+}
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  enqueue(PXLUpload.droppedFiles(e.dataTransfer.items, e.dataTransfer.files, queueStop.signal));
+});
+for (const input of [fileInput, folderInput]) input.addEventListener('change', () => {
+  if (input.files.length) enqueue(Array.from(input.files, file => ({file, path: file.webkitRelativePath || file.name})));
+  input.value = '';
+});
+
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  const files = [];
+  for (const item of items) {
+    if (item.type.startsWith('image/')) files.push(item.getAsFile());
+  }
+  if (files.length) enqueue(files.filter(Boolean).map(file => ({file, path: file.name})));
+});
+
+async function uploadFiles(entries, title, explicitTitle) {
+  await navReady;
+  const user = await uploadUser();
+  if (!user && !allowAnonymous) {
+    window.location.href = '/login';
+    return;
+  }
+  const plan = PXLUpload.planFiles(entries, uploadPolicy);
+  total = plan.groups.reduce((n, group) => n + group.files.length, 0);
+  uploaded = 0;
+  reportEl.textContent = plan.skipped.map(item => item.name + ' : ' + item.reason).join('\n');
+  if (!total) {
+    reportEl.textContent = 'Aucune image compatible à envoyer.\n' + reportEl.textContent;
+    return;
+  }
+  progressEl.style.display = 'block';
+  progressFill.style.width = '0%';
+  progressFill.style.background = '#58a6ff';
+  progressText.textContent = '0 / ' + total + ' images';
+  const summary = await PXLUpload.run(plan, {
+    maxFiles: uploadPolicy.maxFiles, authenticated: !!user, title, explicitTitle,
+    send: sendUploadRequest, refresh: PXLSession.refresh,
+    cancelled: () => stopped,
+    onWait: () => { progressText.textContent = 'Limite temporaire atteinte, reprise automatique en attente...'; },
+    onImage: showResult, onAlbum: showAlbum,
+    onProgress: count => {
+      uploaded = count;
+      progressFill.style.width = Math.round(count / total * 100) + '%';
+      progressText.textContent = count + ' / ' + total + ' images enregistrées';
+    }
+  });
+  progressText.textContent = summary.uploaded + ' / ' + total + ' images enregistrées, ' + summary.albums + ' album(s), ' + summary.skipped + ' fichier(s) ignoré(s).' + (summary.cancelled ? ' Import arrêté.' : '');
+  if (summary.error) {
+    reportEl.textContent += '\n' + summary.error;
+    progressFill.style.background = '#da3633';
+  }
+}
+
+function sendUploadRequest(url, body) {
+  return new Promise((resolve, reject) => {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', url);
+  xhr.timeout = 300000;
+  const uploading = body instanceof FormData;
+  if (!uploading) xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.upload.onprogress = e => {
+    if (e.lengthComputable && uploading && !stopped) {
+      const pct = Math.round(e.loaded / e.total * 100);
+      progressText.textContent = uploaded + ' / ' + total + ' images enregistrées. Lot : ' + pct + '% (' + formatBytes(e.loaded) + ' / ' + formatBytes(e.total) + ')';
+    }
+  };
+  xhr.onload = () => {
+    let data;
+    try { data = JSON.parse(xhr.responseText); }
+    catch (_) { data = {error: 'Réponse serveur illisible (HTTP ' + xhr.status + '). Vérifiez la galerie avant de renvoyer les images.'}; }
+    resolve({status: xhr.status, data, retryAfter: xhr.getResponseHeader('Retry-After')});
+  };
+  xhr.onerror = xhr.ontimeout = () => reject(new Error('Connexion interrompue. Le dernier lot peut avoir été enregistré : vérifiez Mes images avant de le renvoyer.'));
+  xhr.send(uploading ? body : JSON.stringify(body));
+  });
+}
+
+function showAlbum(album, count) {
+  const div = document.createElement('div');
+  div.className = 'result';
+  div.style.display = 'block';
+  const url = BASE + '/a/' + encodeURIComponent(album.short_id);
+  div.innerHTML = `<p>${esc(album.title)} : ${count} images</p>
+    <div class="result-row"><label>Album</label><input readonly value="${esc(url)}"><button class="btn btn-copy" data-copy="${esc(url)}">Copier</button><a class="btn" href="${esc(url)}">Ouvrir</a></div>`;
+  resultsEl.prepend(div);
+}
+
+function showResult(img) {
+  const div = document.createElement('div');
+  div.className = 'result';
+  div.style.display = 'block';
+  div.innerHTML = `
+    <details><summary>${esc(img.short_id)} : ${formatBytes(img.size_bytes)} (liens et suppression)</summary>
+    <img class="result-img" loading="lazy" src="${esc(img.thumb_url)}" alt="">
+    <div class="result-links">
+      <div class="result-row"><label>Vue</label><input readonly value="${esc(img.url)}"><button class="btn btn-copy" data-copy="${esc(img.url)}">Copier</button></div>
+      <div class="result-row"><label>Direct</label><input readonly value="${esc(img.direct_url)}"><button class="btn btn-copy" data-copy="${esc(img.direct_url)}">Copier</button></div>
+      <div class="result-row"><label>Miniature</label><input readonly value="${esc(img.thumb_url)}"><button class="btn btn-copy" data-copy="${esc(img.thumb_url)}">Copier</button></div>
+      <div class="result-row"><label>Markdown</label><input readonly value="![${esc(img.short_id)}](${esc(img.direct_url)})"><button class="btn btn-copy" data-copy="![${esc(img.short_id)}](${esc(img.direct_url)})">Copier</button></div>
+      <div class="result-row"><label>BBCode</label><input readonly value="[img]${esc(img.direct_url)}[/img]"><button class="btn btn-copy" data-copy="[img]${esc(img.direct_url)}[/img]">Copier</button></div>
+      ${img.delete_token ? `<div class="result-row"><label>Suppression</label><input readonly value="${esc(img.delete_token)}"><button class="btn btn-del" data-del-id="${esc(img.short_id)}" data-del-token="${esc(img.delete_token)}">Supprimer</button></div>` : ''}
+    </div>
+    <div class="actions">
+      <span style="color:#8b949e;font-size:.8rem">${esc(img.mime_type)} — ${formatBytes(img.size_bytes)} — ${esc(img.width)}×${esc(img.height)}</span>
+    </div>
+    </details>
+  `;
+  resultsEl.prepend(div);
+}
+
+resultsEl.addEventListener('click', e => {
+  const copyBtn = e.target.closest('[data-copy]');
+  if (copyBtn) {
+    navigator.clipboard.writeText(copyBtn.dataset.copy);
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1500);
+    return;
+  }
+  const delBtn = e.target.closest('[data-del-id]');
+  if (delBtn) {
+    if (!confirm('Supprimer cette image ?')) return;
+    PXLSession.request(BASE + '/api/v1/images/' + delBtn.dataset.delId, {
+      method: 'DELETE',
+      headers: {'X-Delete-Token': delBtn.dataset.delToken}
+    }).then(r => {
+      if (r.ok) {
+        delBtn.closest('.result').style.opacity = '0.3';
+        delBtn.disabled = true;
+        delBtn.textContent = 'Supprimée';
+      }
+    });
+  }
+});
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' o';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' Ko';
+  return (b/1048576).toFixed(1) + ' Mo';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>PXL isolated DOM regression fixture</title>
+<script src="static/pxl-session.js"></script>
+<div id="fixture"></div>
+<script>
+const value = 'name" data-audit-injected="yes\'><span>fixture</span>&.png';
+const target = document.getElementById('fixture');
+const legacy = document.createElement('div');
+legacy.textContent = value;
+const baseline = document.createElement('div');
+baseline.innerHTML = `<img alt="${legacy.innerHTML}">`;
+target.innerHTML = `<img alt="${PXLSession.escapeHTML(value)}"><input value="${PXLSession.escapeHTML(value)}"><button data-name="${PXLSession.escapeHTML(value)}">fixture</button>`;
+const passed = !!baseline.querySelector('[data-audit-injected]') && target.children.length === 3 &&
+  !target.querySelector('[data-audit-injected],span') &&
+  target.children[0].alt === value &&
+  target.children[1].value === value &&
+  target.children[2].dataset.name === value;
+document.body.dataset.audit = passed ? 'PASS' : 'FAIL';
+</script>
+</html>

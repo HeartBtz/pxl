@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mes images — PXL</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<script src="/static/pxl-session.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.5rem;background:#161b22;border-bottom:1px solid #21262d}
+.navbar .logo{color:#58a6ff;text-decoration:none;font-weight:700;font-size:1.2rem}
+.navbar .nav-links{display:flex;gap:1rem;align-items:center}
+.navbar .nav-links a{color:#8b949e;text-decoration:none;font-size:.9rem;transition:color .2s}
+.navbar .nav-links a:hover{color:#c9d1d9}
+.navbar .nav-links a.active{color:#58a6ff}
+.nav-user{display:flex;align-items:center;gap:.7rem}
+.nav-user .username{color:#c9d1d9;font-size:.85rem;font-weight:500}
+.btn-nav{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:.35rem .7rem;border-radius:6px;font-size:.8rem;cursor:pointer;text-decoration:none;transition:all .2s}
+.btn-nav:hover{background:#30363d;border-color:#484f58}
+.container{max-width:1200px;margin:0 auto;padding:1.5rem}
+.header-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
+.header-bar h2{font-size:1.3rem;color:#c9d1d9}
+.header-bar .stats{color:#8b949e;font-size:.85rem}
+.btn{background:#238636;color:#fff;border:none;padding:.5rem 1rem;border-radius:6px;font-size:.85rem;cursor:pointer;text-decoration:none;transition:background .2s}
+.btn:hover{background:#2ea043}
+.btn-sm{padding:.3rem .6rem;font-size:.75rem}
+.btn-outline{background:transparent;color:#8b949e;border:1px solid #30363d}
+.btn-outline:hover{background:#21262d;color:#c9d1d9}
+.btn-danger{background:#da3633}.btn-danger:hover{background:#f85149}
+.btn-copy{background:#30363d;color:#c9d1d9}.btn-copy:hover{background:#484f58}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+.card{background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden;transition:transform .2s,border-color .2s;position:relative}
+.card:hover{transform:translateY(-2px);border-color:#30363d}
+.card .thumb-link{display:block;text-decoration:none;color:inherit}
+.card img{width:100%;height:180px;object-fit:cover;display:block}
+.card-info{padding:.6rem .8rem}
+.card-info .name{font-size:.8rem;color:#c9d1d9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-info .meta{font-size:.7rem;color:#484f58;margin-top:.2rem}
+.card-actions{display:flex;gap:.3rem;padding:.4rem .8rem .6rem;border-top:1px solid #21262d}
+.card-actions button,.card-actions a{flex:1;text-align:center;font-size:.7rem}
+.empty{text-align:center;padding:4rem;color:#484f58}
+.empty p{font-size:1.1rem;margin-bottom:1rem}
+.toast{position:fixed;bottom:2rem;right:2rem;background:#238636;color:#fff;padding:.7rem 1.2rem;border-radius:8px;font-size:.85rem;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.pagination{display:flex;justify-content:center;gap:.5rem;margin-top:2rem}
+.pagination button{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:.4rem .8rem;border-radius:6px;cursor:pointer;font-size:.85rem}
+.pagination button:hover{background:#30363d}
+.pagination button.active{background:#58a6ff;color:#fff;border-color:#58a6ff}
+.pagination button:disabled{opacity:.4;cursor:not-allowed}
+/* Album cards */
+.album-card{background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden;transition:transform .2s,border-color .2s;cursor:pointer}
+.album-card:hover{transform:translateY(-2px);border-color:#30363d}
+.album-cover{display:grid;grid-template-columns:1fr 1fr;gap:2px;height:180px;overflow:hidden;background:#0d1117}
+.album-cover img{width:100%;height:100%;object-fit:cover}
+.album-cover.single img{grid-column:1/-1}
+.album-card .card-info{padding:.6rem .8rem}
+.album-card .card-info .name{font-size:.85rem;color:#c9d1d9;font-weight:600}
+.album-card .card-info .meta{font-size:.75rem;color:#484f58;margin-top:.2rem}
+.album-card .card-actions{display:flex;gap:.3rem;padding:.4rem .8rem .6rem;border-top:1px solid #21262d}
+.album-card .card-actions button{flex:1;text-align:center;font-size:.7rem}
+/* Modal for share links */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:1.5rem;max-width:550px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{color:#c9d1d9;margin-bottom:1rem;font-size:1rem}
+.modal .close{float:right;background:none;border:none;color:#8b949e;font-size:1.2rem;cursor:pointer}
+.modal .close:hover{color:#c9d1d9}
+.share-row{display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem}
+.share-row label{color:#8b949e;font-size:.7rem;min-width:65px}
+.share-row input{flex:1;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:.35rem .5rem;border-radius:6px;font-size:.75rem;font-family:monospace}
+.share-row button{background:#30363d;color:#c9d1d9;border:none;padding:.35rem .5rem;border-radius:6px;font-size:.7rem;cursor:pointer}
+.share-row button:hover{background:#484f58}
+footer{text-align:center;padding:1rem;color:#484f58;font-size:.8rem;margin-top:auto}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a class="logo" href="/">PXL</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div>
+      <h2>Mes images</h2>
+      <span class="stats" id="statsText">Chargement…</span>
+    </div>
+    <div style="display:flex;gap:.5rem;align-items:center">
+      <button class="btn btn-outline" id="btn-view-images" style="background:#238636;color:#fff">Images</button>
+      <button class="btn btn-outline" id="btn-view-albums">Albums</button>
+      <a class="btn" href="/">+ Uploader</a>
+    </div>
+  </div>
+
+  <div id="images-view">
+    <div class="grid" id="imageGrid"></div>
+    <div class="empty" id="emptyState" style="display:none">
+      <p>Aucune image pour le moment</p>
+      <a class="btn" href="/">Uploadez votre première image</a>
+    </div>
+  </div>
+
+  <div id="albums-view" style="display:none">
+    <div class="grid" id="albumGrid"></div>
+    <div class="empty" id="emptyAlbums" style="display:none">
+      <p>Aucun album pour le moment</p>
+      <p style="color:#8b949e;font-size:.85rem">Uploadez plusieurs images en même temps pour créer un album automatiquement</p>
+    </div>
+  </div>
+</div>
+
+<!-- Share links modal -->
+<div class="modal-overlay" id="shareModal">
+  <div class="modal">
+    <button class="close" id="closeModal">✕</button>
+    <h3 id="modalTitle">Liens de partage</h3>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copié !</div>
+<footer>PXL — Hébergement d'images auto-hébergé</footer>
+
+<script nonce="{{.Nonce}}">
+const BASE = '{{.BaseURL}}';
+
+// ── Navbar ──
+async function updateNav() {
+  const nav = document.getElementById('navLinks');
+  const user = await PXLSession.currentUser();
+  let h = '<a href="/">Upload</a>';
+  if (user) {
+    h += '<a href="/gallery" class="active">Mes images</a>';
+    h += '<a href="/account">Mon compte</a>';
+    if (user.role === 'admin') h += '<a href="/admin">Admin</a>';
+    h += '<span class="nav-user"><span class="username">' + esc(user.username) + '</span>';
+    h += '<button class="btn-nav" id="btn-logout">Déconnexion</button></span>';
+  } else {
+    h += '<a href="/login" class="btn-nav">Connexion</a>';
+  }
+  nav.innerHTML = h;
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+}
+async function logout() {
+  await PXLSession.logout();
+  window.location.href = '/';
+}
+updateNav();
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg || 'Copié !';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+function esc(s) {
+  return PXLSession.escapeHTML(s);
+}
+
+// ── Load images from API ──
+let currentPage = 1;
+const perPage = 50;
+
+async function loadImages(page) {
+  currentPage = page;
+  try {
+    const res = await PXLSession.request(BASE + '/api/v1/images?page=' + page + '&per_page=' + perPage);
+    if (res.status === 401) { window.location.href = '/login'; return; }
+    if (!res.ok) return;
+    const data = await res.json();
+
+    document.getElementById('statsText').textContent = data.total + ' image(s)';
+    const grid = document.getElementById('imageGrid');
+    const empty = document.getElementById('emptyState');
+
+    if (!data.images || data.images.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    grid.innerHTML = data.images.map(i => `
+      <div class="card" data-short-id="${esc(i.short_id)}">
+        <a class="thumb-link" href="${esc(i.url)}">
+          <img src="${esc(i.thumb_url)}" alt="${esc(i.original_name)}" loading="lazy">
+          <div class="card-info">
+            <div class="name">${esc(i.original_name)}</div>
+            <div class="meta">${i.width}×${i.height} · ${i.view_count} vues</div>
+          </div>
+        </a>
+        <div class="card-actions">
+          <button class="btn btn-sm btn-copy" data-share="${esc(i.short_id)}" data-url="${esc(i.url)}" data-direct="${esc(i.direct_url)}" data-thumb="${esc(i.thumb_url)}" data-name="${esc(i.original_name)}">🔗 Liens</button>
+          <button class="btn btn-sm btn-copy" data-copy="${esc(i.direct_url)}">📋 Copier</button>
+          <button class="btn btn-sm btn-danger" data-del="${esc(i.short_id)}">🗑</button>
+        </div>
+      </div>
+    `).join('');
+
+    // Pagination
+    renderPagination(data.page, data.total_pages);
+  } catch {
+    document.getElementById('statsText').textContent = 'Erreur de chargement';
+  }
+}
+
+function renderPagination(current, total) {
+  // Remove existing pagination
+  let pag = document.getElementById('galleryPagination');
+  if (!pag) {
+    pag = document.createElement('div');
+    pag.id = 'galleryPagination';
+    pag.className = 'pagination';
+    document.querySelector('.container').appendChild(pag);
+  }
+  if (total <= 1) { pag.innerHTML = ''; return; }
+  let html = '';
+  if (current > 1) html += `<button class="btn" data-page="${current-1}">←</button>`;
+  for (let i = Math.max(1, current-2); i <= Math.min(total, current+2); i++) {
+    html += `<button class="${i===current?'active':''}" data-page="${i}">${i}</button>`;
+  }
+  if (current < total) html += `<button class="btn" data-page="${current+1}">→</button>`;
+  pag.innerHTML = html;
+  pag.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-page]');
+    if (btn) loadImages(parseInt(btn.dataset.page));
+  });
+}
+
+// Initial load
+loadImages(1);
+
+const grid = document.getElementById('imageGrid');
+if (grid) {
+  grid.addEventListener('click', e => {
+    // Copy direct link
+    const copyBtn = e.target.closest('[data-copy]');
+    if (copyBtn) {
+      e.preventDefault();
+      navigator.clipboard.writeText(copyBtn.dataset.copy);
+      showToast();
+      return;
+    }
+
+    // Share modal
+    const shareBtn = e.target.closest('[data-share]');
+    if (shareBtn) {
+      e.preventDefault();
+      const d = shareBtn.dataset;
+      const modal = document.getElementById('shareModal');
+      document.getElementById('modalTitle').textContent = 'Liens — ' + d.name;
+      document.getElementById('modalContent').innerHTML = `
+        <div class="share-row"><label>Vue</label><input readonly value="${esc(d.url)}"><button data-copy="${esc(d.url)}">Copier</button></div>
+        <div class="share-row"><label>Direct</label><input readonly value="${esc(d.direct)}"><button data-copy="${esc(d.direct)}">Copier</button></div>
+        <div class="share-row"><label>Miniature</label><input readonly value="${esc(d.thumb)}"><button data-copy="${esc(d.thumb)}">Copier</button></div>
+        <div class="share-row"><label>Markdown</label><input readonly value="![${esc(d.name)}](${esc(d.direct)})"><button data-copy="![${esc(d.name)}](${esc(d.direct)})">Copier</button></div>
+        <div class="share-row"><label>BBCode</label><input readonly value="[img]${esc(d.direct)}[/img]"><button data-copy="[img]${esc(d.direct)}[/img]">Copier</button></div>
+      `;
+      modal.classList.add('open');
+      return;
+    }
+
+    // Delete
+    const delBtn = e.target.closest('[data-del]');
+    if (delBtn) {
+      e.preventDefault();
+      const shortId = delBtn.dataset.del;
+      if (!confirm('Supprimer cette image ?')) return;
+      PXLSession.request(BASE + '/api/v1/images/' + shortId, {method: 'DELETE'}).then(r => {
+        if (r.ok) {
+          showToast('Image supprimée');
+          loadImages(currentPage);
+        } else {
+          showToast('Échec de la suppression');
+        }
+      });
+      return;
+    }
+  });
+}
+
+// Modal events
+document.getElementById('closeModal').addEventListener('click', () => {
+  document.getElementById('shareModal').classList.remove('open');
+});
+document.getElementById('shareModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+  const copyBtn = e.target.closest('[data-copy]');
+  if (copyBtn) {
+    navigator.clipboard.writeText(copyBtn.dataset.copy);
+    showToast();
+  }
+});
+
+// ── View toggle: Images / Albums ──
+const btnImages = document.getElementById('btn-view-images');
+const btnAlbums = document.getElementById('btn-view-albums');
+const imagesView = document.getElementById('images-view');
+const albumsView = document.getElementById('albums-view');
+
+btnImages.addEventListener('click', () => {
+  imagesView.style.display = '';
+  albumsView.style.display = 'none';
+  btnImages.style.background = '#238636'; btnImages.style.color = '#fff';
+  btnAlbums.style.background = ''; btnAlbums.style.color = '';
+  document.getElementById('statsText').textContent = '';
+  loadImages(1);
+});
+btnAlbums.addEventListener('click', () => {
+  imagesView.style.display = 'none';
+  albumsView.style.display = '';
+  btnAlbums.style.background = '#238636'; btnAlbums.style.color = '#fff';
+  btnImages.style.background = ''; btnImages.style.color = '';
+  loadAlbums();
+});
+
+// ── Albums ──
+async function loadAlbums() {
+  try {
+    const res = await PXLSession.request(BASE + '/api/v1/albums');
+    if (!res.ok) return;
+    const data = await res.json();
+    const albumGrid = document.getElementById('albumGrid');
+    const emptyAlbums = document.getElementById('emptyAlbums');
+
+    if (!data.albums || data.albums.length === 0) {
+      albumGrid.innerHTML = '';
+      emptyAlbums.style.display = 'block';
+      document.getElementById('statsText').textContent = '0 album(s)';
+      return;
+    }
+    emptyAlbums.style.display = 'none';
+    document.getElementById('statsText').textContent = data.albums.length + ' album(s)';
+
+    // For each album, load its images to build covers
+    const albumsHTML = [];
+    for (const album of data.albums) {
+      let coverHTML = '<div class="album-cover single"><img src="" alt="" style="background:#21262d"></div>';
+      try {
+        const ar = await PXLSession.request(BASE + '/api/v1/albums/' + album.short_id);
+        if (ar.ok) {
+          const ad = await ar.json();
+          const imgs = ad.images || [];
+          if (imgs.length >= 4) {
+            coverHTML = `<div class="album-cover">
+              <img src="${esc(imgs[0].thumb_url)}" alt="" loading="lazy">
+              <img src="${esc(imgs[1].thumb_url)}" alt="" loading="lazy">
+              <img src="${esc(imgs[2].thumb_url)}" alt="" loading="lazy">
+              <img src="${esc(imgs[3].thumb_url)}" alt="" loading="lazy">
+            </div>`;
+          } else if (imgs.length >= 2) {
+            coverHTML = `<div class="album-cover">
+              ${imgs.slice(0,4).map(i => `<img src="${esc(i.thumb_url)}" alt="" loading="lazy">`).join('')}
+            </div>`;
+          } else if (imgs.length === 1) {
+            coverHTML = `<div class="album-cover single"><img src="${esc(imgs[0].thumb_url)}" alt="" loading="lazy"></div>`;
+          }
+          album._count = imgs.length;
+        }
+      } catch {}
+      const count = album._count || 0;
+      const date = new Date(album.created_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'});
+      albumsHTML.push(`
+        <div class="album-card" data-album-id="${esc(album.short_id)}">
+          ${coverHTML}
+          <div class="card-info">
+            <div class="name">${esc(album.title)}</div>
+            <div class="meta">${count} image(s) · ${date}</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-sm btn-copy" data-album-link="${BASE}/a/${esc(album.short_id)}">🔗 Copier le lien</button>
+            <button class="btn btn-sm btn-danger" data-del-album="${esc(album.short_id)}">🗑 Supprimer</button>
+          </div>
+        </div>
+      `);
+    }
+    albumGrid.innerHTML = albumsHTML.join('');
+  } catch {
+    document.getElementById('statsText').textContent = 'Erreur de chargement';
+  }
+}
+
+// Album grid events
+const albumGrid = document.getElementById('albumGrid');
+if (albumGrid) {
+  albumGrid.addEventListener('click', e => {
+    // Copy album link
+    const copyBtn = e.target.closest('[data-album-link]');
+    if (copyBtn) {
+      e.preventDefault(); e.stopPropagation();
+      navigator.clipboard.writeText(copyBtn.dataset.albumLink);
+      showToast('Lien de l\'album copié !');
+      return;
+    }
+    // Delete album
+    const delBtn = e.target.closest('[data-del-album]');
+    if (delBtn) {
+      e.preventDefault(); e.stopPropagation();
+      if (!confirm('Supprimer cet album ? Les images ne seront pas supprimées.')) return;
+      PXLSession.request(BASE + '/api/v1/albums/' + delBtn.dataset.delAlbum, {method: 'DELETE'}).then(r => {
+        if (r.ok) { showToast('Album supprimé'); loadAlbums(); }
+        else showToast('Échec de la suppression');
+      });
+      return;
+    }
+    // Click on album card to navigate
+    const card = e.target.closest('.album-card');
+    if (card && card.dataset.albumId) {
+      window.location.href = '/a/' + card.dataset.albumId;
+    }
+  });
+}
+</script>
+</body>
+</html>

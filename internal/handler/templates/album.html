@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Album — PXL</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<script src="/static/pxl-session.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.5rem;background:#161b22;border-bottom:1px solid #21262d}
+.navbar .logo{color:#58a6ff;text-decoration:none;font-weight:700;font-size:1.2rem}
+.navbar .nav-links{display:flex;gap:1rem;align-items:center}
+.navbar .nav-links a{color:#8b949e;text-decoration:none;font-size:.9rem;transition:color .2s}
+.navbar .nav-links a:hover{color:#c9d1d9}
+.nav-user{display:flex;align-items:center;gap:.7rem}
+.nav-user .username{color:#c9d1d9;font-size:.85rem;font-weight:500}
+.btn-nav{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:.35rem .7rem;border-radius:6px;font-size:.8rem;cursor:pointer;text-decoration:none;transition:all .2s}
+.btn-nav:hover{background:#30363d;border-color:#484f58}
+.container{max-width:1200px;margin:0 auto;padding:1.5rem}
+.album-header{margin-bottom:1.5rem}
+.album-header h2{font-size:1.3rem;color:#c9d1d9;margin-bottom:.3rem}
+.album-header .meta{color:#8b949e;font-size:.85rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+.card{background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden;transition:transform .2s,border-color .2s}
+.card:hover{transform:translateY(-2px);border-color:#30363d}
+.card a{display:block;text-decoration:none;color:inherit}
+.card img{width:100%;height:180px;object-fit:cover;display:block}
+.card-info{padding:.6rem .8rem}
+.card-info .name{font-size:.8rem;color:#c9d1d9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-info .meta{font-size:.7rem;color:#484f58;margin-top:.2rem}
+.empty{text-align:center;padding:4rem;color:#484f58}
+.toast{position:fixed;bottom:2rem;right:2rem;background:#238636;color:#fff;padding:.7rem 1.2rem;border-radius:8px;font-size:.85rem;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+footer{text-align:center;padding:1rem;color:#484f58;font-size:.8rem;margin-top:auto}
+/* Lightbox */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;align-items:center;justify-content:center;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);color:#fff;border:none;font-size:2rem;padding:.5rem 1rem;cursor:pointer;border-radius:8px}
+.lightbox-nav:hover{background:rgba(255,255,255,.3)}
+.lightbox-prev{left:1rem}
+.lightbox-next{right:1rem}
+.lightbox-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a class="logo" href="/">PXL</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<div class="container">
+  <div class="album-header">
+    <h2 id="albumTitle">Chargement…</h2>
+    <div class="meta" id="albumMeta"></div>
+  </div>
+  <div class="grid" id="albumGrid"></div>
+  <div class="empty" id="emptyState" style="display:none">Cet album est vide</div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lb-close">✕</button>
+  <button class="lightbox-nav lightbox-prev" id="lb-prev">‹</button>
+  <img id="lb-img" src="" alt="">
+  <button class="lightbox-nav lightbox-next" id="lb-next">›</button>
+</div>
+
+<div class="toast" id="toast">Copié !</div>
+<footer>PXL — Hébergement d'images auto-hébergé</footer>
+
+<script nonce="{{.Nonce}}">
+const BASE = '{{.BaseURL}}';
+const SHORT_ID = '{{.ShortID}}';
+
+function esc(s) { return PXLSession.escapeHTML(s); }
+function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg || 'Copié !'; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1500); }
+
+// Navbar
+(async function() {
+  const nav = document.getElementById('navLinks');
+  const user = await PXLSession.currentUser();
+  let h = '<a href="/">Upload</a>';
+  if (user) {
+    h += '<a href="/gallery">Mes images</a>';
+    h += '<a href="/account">Mon compte</a>';
+    if (user.role === 'admin') h += '<a href="/admin">Admin</a>';
+    h += '<span class="nav-user"><span class="username">' + esc(user.username) + '</span>';
+    h += '<button class="btn-nav" id="btn-logout">Déconnexion</button></span>';
+  } else {
+    h += '<a href="/login" class="btn-nav">Connexion</a>';
+  }
+  nav.innerHTML = h;
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) logoutBtn.addEventListener('click', async function() {
+    await PXLSession.logout();
+    window.location.href = '/';
+  });
+})();
+
+// Load album
+let albumImages = [];
+let lbIndex = 0;
+
+async function loadAlbum() {
+  try {
+    const res = await PXLSession.request(BASE + '/api/v1/albums/' + SHORT_ID);
+    if (res.status === 404) {
+      document.getElementById('albumTitle').textContent = 'Album introuvable';
+      document.getElementById('emptyState').style.display = 'block';
+      return;
+    }
+    if (!res.ok) return;
+    const album = await res.json();
+    document.title = (album.title || 'Album') + ' — PXL';
+    document.getElementById('albumTitle').textContent = album.title || 'Album sans titre';
+    const date = new Date(album.created_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const imgs = album.images || [];
+    document.getElementById('albumMeta').textContent = imgs.length + ' image(s) · ' + date;
+    albumImages = imgs;
+
+    if (imgs.length === 0) {
+      document.getElementById('albumGrid').innerHTML = '';
+      document.getElementById('emptyState').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('albumGrid').innerHTML = imgs.map((img, idx) => `
+      <div class="card">
+        <a href="#" data-lb="${idx}">
+          <img src="${esc(img.thumb_url)}" alt="${esc(img.original_name)}" loading="lazy">
+          <div class="card-info">
+            <div class="name">${esc(img.original_name)}</div>
+            <div class="meta">${img.width}×${img.height}</div>
+          </div>
+        </a>
+      </div>
+    `).join('');
+  } catch {
+    document.getElementById('albumTitle').textContent = 'Erreur de chargement';
+  }
+}
+
+loadAlbum();
+
+// Lightbox
+const lb = document.getElementById('lightbox');
+const lbImg = document.getElementById('lb-img');
+
+function openLB(idx) {
+  if (idx < 0 || idx >= albumImages.length) return;
+  lbIndex = idx;
+  lbImg.src = albumImages[idx].direct_url;
+  lb.classList.add('open');
+}
+function closeLB() { lb.classList.remove('open'); lbImg.src = ''; }
+
+document.getElementById('albumGrid').addEventListener('click', e => {
+  const link = e.target.closest('[data-lb]');
+  if (link) { e.preventDefault(); openLB(parseInt(link.dataset.lb)); }
+});
+document.getElementById('lb-close').addEventListener('click', closeLB);
+lb.addEventListener('click', e => { if (e.target === lb) closeLB(); });
+document.getElementById('lb-prev').addEventListener('click', e => { e.stopPropagation(); openLB(lbIndex - 1); });
+document.getElementById('lb-next').addEventListener('click', e => { e.stopPropagation(); openLB(lbIndex + 1); });
+document.addEventListener('keydown', e => {
+  if (!lb.classList.contains('open')) return;
+  if (e.key === 'Escape') closeLB();
+  if (e.key === 'ArrowLeft') openLB(lbIndex - 1);
+  if (e.key === 'ArrowRight') openLB(lbIndex + 1);
+});
+</script>
+</body>
+</html>

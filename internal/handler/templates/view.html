@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Image.OriginalName}} — PXL</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<script src="/static/pxl-session.js"></script>
+<!-- OpenGraph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{.Image.OriginalName}}">
+<meta property="og:image" content="{{.Image.DirectURL}}">
+<meta property="og:image:width" content="{{.Image.Width}}">
+<meta property="og:image:height" content="{{.Image.Height}}">
+<meta property="og:url" content="{{.Image.URL}}">
+<meta property="og:site_name" content="PXL">
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{.Image.OriginalName}}">
+<meta name="twitter:image" content="{{.Image.DirectURL}}">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.5rem;background:#161b22;border-bottom:1px solid #21262d}
+.navbar .logo{color:#58a6ff;text-decoration:none;font-weight:700;font-size:1.2rem}
+.navbar .nav-links{display:flex;gap:1rem;align-items:center}
+.navbar .nav-links a{color:#8b949e;text-decoration:none;font-size:.9rem;transition:color .2s}
+.navbar .nav-links a:hover{color:#c9d1d9}
+.nav-user{display:flex;align-items:center;gap:.7rem}
+.nav-user .username{color:#c9d1d9;font-size:.85rem;font-weight:500}
+.btn-nav{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:.35rem .7rem;border-radius:6px;font-size:.8rem;cursor:pointer;text-decoration:none;transition:all .2s}
+.btn-nav:hover{background:#30363d;border-color:#484f58}
+.btn-nav-primary{background:#238636;color:#fff;border-color:#238636}
+.btn-nav-primary:hover{background:#2ea043}
+.topbar{display:flex;align-items:center;justify-content:flex-end;padding:.5rem 1.5rem;background:#161b22;border-bottom:1px solid #21262d}
+.topbar .actions{display:flex;gap:.5rem}
+.btn{background:#30363d;color:#c9d1d9;border:none;padding:.4rem .8rem;border-radius:6px;font-size:.8rem;cursor:pointer;transition:background .2s;text-decoration:none}
+.btn:hover{background:#484f58}
+.btn-del{background:#da3633;color:#fff}.btn-del:hover{background:#f85149}
+.btn-copy{background:#238636;color:#fff}.btn-copy:hover{background:#2ea043}
+.image-container{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem;overflow:auto}
+.image-container img{max-width:100%;max-height:85vh;object-fit:contain;border-radius:4px}
+.meta{background:#161b22;border-top:1px solid #21262d;padding:.8rem 1.5rem;display:flex;gap:2rem;flex-wrap:wrap;font-size:.85rem;color:#8b949e}
+.meta span{display:flex;align-items:center;gap:.3rem}
+.share-panel{background:#161b22;border-top:1px solid #21262d;padding:.8rem 1.5rem;display:none}
+.share-panel.open{display:block}
+.share-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+.share-row label{color:#8b949e;font-size:.75rem;min-width:70px}
+.share-row input{flex:1;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:.4rem .6rem;border-radius:6px;font-size:.8rem;font-family:monospace}
+.share-row button{background:#30363d;color:#c9d1d9;border:none;padding:.4rem .6rem;border-radius:6px;font-size:.75rem;cursor:pointer}
+.share-row button:hover{background:#484f58}
+.toast{position:fixed;bottom:2rem;right:2rem;background:#238636;color:#fff;padding:.7rem 1.2rem;border-radius:8px;font-size:.85rem;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a class="logo" href="/">PXL</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<div class="topbar">
+  <div class="actions">
+    <button class="btn btn-copy" id="shareBtn">🔗 Liens de partage</button>
+    <button class="btn" id="copyBtn" data-url="{{.Image.DirectURL}}">📋 Copier le lien</button>
+    <a class="btn" href="{{.Image.DirectURL}}" download>⬇ Télécharger</a>
+    {{if .IsOwner}}<button class="btn btn-del" id="delBtn">🗑 Supprimer</button>{{end}}
+  </div>
+</div>
+
+<div class="share-panel" id="sharePanel">
+  <div class="share-row"><label>Vue</label><input readonly value="{{.Image.URL}}"><button data-copy="{{.Image.URL}}">Copier</button></div>
+  <div class="share-row"><label>Direct</label><input readonly value="{{.Image.DirectURL}}"><button data-copy="{{.Image.DirectURL}}">Copier</button></div>
+  <div class="share-row"><label>Miniature</label><input readonly value="{{.Image.ThumbURL}}"><button data-copy="{{.Image.ThumbURL}}">Copier</button></div>
+  <div class="share-row"><label>Markdown</label><input readonly value="![{{.Image.OriginalName}}]({{.Image.DirectURL}})"><button data-copy="![{{.Image.OriginalName}}]({{.Image.DirectURL}})">Copier</button></div>
+  <div class="share-row"><label>BBCode</label><input readonly value="[img]{{.Image.DirectURL}}[/img]"><button data-copy="[img]{{.Image.DirectURL}}[/img]">Copier</button></div>
+</div>
+
+<div class="image-container">
+  <img src="{{.Image.DirectURL}}" alt="{{.Image.OriginalName}}">
+</div>
+
+<div class="meta">
+  <span>📄 {{.Image.OriginalName}}</span>
+  <span>📐 {{.Image.Width}} × {{.Image.Height}}</span>
+  <span>💾 {{.Image.SizeBytes}} octets</span>
+  <span>🎨 {{.Image.MIMEType}}</span>
+  <span>👁 {{.Image.ViewCount}} vues</span>
+  <span>📅 {{.Image.CreatedAt}}</span>
+</div>
+
+<div class="toast" id="toast">Copié !</div>
+
+<script nonce="{{.Nonce}}">
+const BASE = '{{.BaseURL}}';
+
+function esc(value) {
+  const node = document.createElement('div');
+  node.textContent = value == null ? '' : String(value);
+  return node.innerHTML;
+}
+
+// ── Navbar ──
+async function updateNav() {
+  const nav = document.getElementById('navLinks');
+  const user = await PXLSession.currentUser();
+  let h = '<a href="/">Upload</a>';
+  if (user) {
+    h += '<a href="/gallery">Mes images</a>';
+    h += '<a href="/account">Mon compte</a>';
+    if (user.role === 'admin') h += '<a href="/admin">Admin</a>';
+    h += '<span class="nav-user"><span class="username">' + esc(user.username) + '</span>';
+    h += '<button class="btn-nav" id="btn-logout">Déconnexion</button></span>';
+  } else {
+    h += '<a href="/login" class="btn-nav btn-nav-primary">Connexion</a>';
+  }
+  nav.innerHTML = h;
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+}
+async function logout() {
+  await PXLSession.logout();
+  window.location.href = '/';
+}
+updateNav();
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg || 'Copié !';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+// ── Copy link ──
+document.getElementById('copyBtn').addEventListener('click', function() {
+  navigator.clipboard.writeText(this.dataset.url);
+  showToast();
+});
+
+// ── Share panel toggle ──
+document.getElementById('shareBtn').addEventListener('click', () => {
+  document.getElementById('sharePanel').classList.toggle('open');
+});
+
+// ── Share panel copy buttons ──
+document.getElementById('sharePanel').addEventListener('click', e => {
+  const btn = e.target.closest('[data-copy]');
+  if (btn) {
+    navigator.clipboard.writeText(btn.dataset.copy);
+    showToast();
+  }
+});
+
+// ── Delete ──
+const delBtn = document.getElementById('delBtn');
+if (delBtn) {
+  delBtn.addEventListener('click', function() {
+    if (!confirm('Supprimer cette image définitivement ?')) return;
+    PXLSession.request(BASE + '/api/v1/images/{{.ShortID}}', {method: 'DELETE'}).then(r => {
+      if (r.ok) { showToast('Image supprimée'); setTimeout(() => window.location = '/gallery', 1000); }
+      else { alert('Échec de la suppression'); }
+    });
+  });
+}
+</script>
+</body>
+</html>

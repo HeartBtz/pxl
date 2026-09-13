@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PXL — Connexion</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<script src="/static/pxl-session.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.5rem;background:#161b22;border-bottom:1px solid #21262d}
+.navbar .logo{color:#58a6ff;text-decoration:none;font-weight:700;font-size:1.2rem}
+.navbar .nav-links{display:flex;gap:1rem;align-items:center}
+.navbar .nav-links a{color:#8b949e;text-decoration:none;font-size:.9rem;transition:color .2s}
+.navbar .nav-links a:hover{color:#c9d1d9}
+.content{flex:1;display:flex;align-items:center;justify-content:center;padding:2rem}
+.auth-container{max-width:400px;width:100%;background:#161b22;border:1px solid #21262d;border-radius:12px;padding:2rem}
+.auth-container h2{font-size:1.5rem;margin-bottom:.5rem;color:#c9d1d9}
+.auth-container .subtitle{color:#8b949e;font-size:.85rem;margin-bottom:1.5rem}
+.tabs{display:flex;gap:0;margin-bottom:1.5rem;border-bottom:1px solid #21262d}
+.tab{flex:1;padding:.7rem;text-align:center;background:transparent;border:none;color:#8b949e;font-size:.9rem;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent}
+.tab.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.tab:hover{color:#c9d1d9}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;color:#8b949e;font-size:.8rem;margin-bottom:.3rem}
+.form-group input{width:100%;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:.6rem .8rem;border-radius:6px;font-size:.9rem;transition:border-color .2s}
+.form-group input:focus{outline:none;border-color:#58a6ff}
+.btn-primary{width:100%;background:#238636;color:#fff;border:none;padding:.7rem;border-radius:6px;font-size:.95rem;cursor:pointer;transition:background .2s;margin-top:.5rem}
+.btn-primary:hover{background:#2ea043}
+.btn-primary:disabled{background:#21262d;color:#484f58;cursor:not-allowed}
+.error-msg{background:#da36331a;border:1px solid #da363355;color:#f85149;padding:.6rem .8rem;border-radius:6px;font-size:.85rem;margin-bottom:1rem;display:none}
+.success-msg{background:#2386361a;border:1px solid #23863655;color:#3fb950;padding:.6rem .8rem;border-radius:6px;font-size:.85rem;margin-bottom:1rem;display:none}
+.form-panel{display:none}
+.form-panel.active{display:block}
+footer{text-align:center;padding:1rem;color:#484f58;font-size:.8rem}
+footer a{color:#58a6ff}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a class="logo" href="/">PXL</a>
+  <div class="nav-links">
+    <a href="/">Upload</a>
+  </div>
+</nav>
+
+<div class="content">
+  <div class="auth-container">
+    <div class="tabs">
+      <button class="tab active" data-tab="login">Connexion</button>
+      {{if .AllowRegistration}}<button class="tab" data-tab="register">Créer un compte</button>{{end}}
+    </div>
+
+    <div id="errorMsg" class="error-msg"></div>
+    <div id="successMsg" class="success-msg"></div>
+
+    <!-- Login Form -->
+    <div class="form-panel active" id="panel-login">
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginUser">Nom d'utilisateur</label>
+          <input type="text" id="loginUser" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPass">Mot de passe</label>
+          <input type="password" id="loginPass" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn-primary">Se connecter</button>
+      </form>
+    </div>
+
+    <!-- Register Form -->
+    {{if .AllowRegistration}}
+    <div class="form-panel" id="panel-register">
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="regUser">Nom d'utilisateur</label>
+          <input type="text" id="regUser" autocomplete="username" minlength="3" maxlength="30" required>
+        </div>
+        <div class="form-group">
+          <label for="regEmail">Email</label>
+          <input type="email" id="regEmail" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="regPass">Mot de passe</label>
+          <input type="password" id="regPass" autocomplete="new-password" minlength="8" required>
+        </div>
+        <div class="form-group">
+          <label for="regPassConfirm">Confirmer le mot de passe</label>
+          <input type="password" id="regPassConfirm" autocomplete="new-password" minlength="8" required>
+        </div>
+        <button type="submit" class="btn-primary">Créer mon compte</button>
+      </form>
+    </div>
+    {{end}}
+  </div>
+</div>
+
+<footer>PXL — Hébergement d'images auto-hébergé</footer>
+
+<script nonce="{{.Nonce}}">
+const BASE = '{{.BaseURL}}';
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    hideMessages();
+  });
+});
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('successMsg').style.display = 'none';
+}
+
+function showSuccess(msg) {
+  const el = document.getElementById('successMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('errorMsg').style.display = 'none';
+}
+
+function hideMessages() {
+  document.getElementById('errorMsg').style.display = 'none';
+  document.getElementById('successMsg').style.display = 'none';
+}
+
+// Login
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  hideMessages();
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+
+  try {
+    const res = await fetch(BASE + '/api/v1/auth/browser-login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showError(data.error || 'Identifiants invalides');
+      return;
+    }
+    localStorage.setItem('pxl_user', JSON.stringify(data.user));
+    window.location.href = '/gallery';
+  } catch {
+    showError('Erreur réseau');
+  }
+});
+
+// Register
+const regForm = document.getElementById('registerForm');
+if (regForm) {
+  regForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    hideMessages();
+    const username = document.getElementById('regUser').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPass').value;
+    const confirm = document.getElementById('regPassConfirm').value;
+
+    if (password !== confirm) {
+      showError('Les mots de passe ne correspondent pas');
+      return;
+    }
+
+    try {
+      const res = await fetch(BASE + '/api/v1/auth/browser-register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username, email, password})
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const msgs = {
+          'username, email and password required': 'Tous les champs sont requis',
+          'username must be between 3 and 30 characters': 'Le nom doit faire entre 3 et 30 caractères',
+          'password must be at least 8 characters': 'Le mot de passe doit faire au moins 8 caractères',
+          'user already exists': 'Ce nom d\'utilisateur ou email est déjà pris',
+          'registration is disabled': 'Les inscriptions sont désactivées'
+        };
+        showError(msgs[data.error] || data.error || 'Erreur lors de l\'inscription');
+        return;
+      }
+      localStorage.setItem('pxl_user', JSON.stringify(data.user));
+      window.location.href = '/gallery';
+    } catch {
+      showError('Erreur réseau');
+    }
+  });
+}
+
+// Redirect if already logged in
+PXLSession.currentUser().then(user => { if (user) window.location.href = '/gallery'; });
+</script>
+</body>
+</html>

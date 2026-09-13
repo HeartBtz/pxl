@@ -1,0 +1,125 @@
+services:
+  pxl:
+    image: "ghcr.io/heartbtz/pxl:${PXL_VERSION:-latest}"
+    build:
+      context: .
+      args:
+        VERSION: "${PXL_VERSION:-dev}"
+    ports:
+      - "${PXL_BIND_ADDRESS:-127.0.0.1}:${PXL_PORT:-8080}:8080"
+    environment:
+      PXL_SERVER_HOST: "0.0.0.0"
+      PXL_SERVER_PORT: "8080"
+      PXL_SERVER_BASE_URL: "${PXL_BASE_URL:-http://localhost:8080}"
+      PXL_DB_HOST: "postgres"
+      PXL_DB_PORT: "5432"
+      PXL_DB_NAME: "pxl"
+      PXL_DB_USER: "pxl"
+      PXL_DB_PASS: "${PXL_DB_PASS:?Set PXL_DB_PASS}"
+      PXL_DB_SSLMODE: "disable"
+      PXL_STORAGE_BACKEND: "${PXL_STORAGE_BACKEND:-local}"
+      PXL_STORAGE_LOCAL_PATH: "/app/data/images"
+      PXL_STORAGE_S3_ENDPOINT: "${PXL_STORAGE_S3_ENDPOINT:-}"
+      PXL_STORAGE_S3_REGION: "${PXL_STORAGE_S3_REGION:-us-east-1}"
+      PXL_STORAGE_S3_BUCKET: "${PXL_STORAGE_S3_BUCKET:-}"
+      PXL_STORAGE_S3_ACCESS_KEY: "${PXL_STORAGE_S3_ACCESS_KEY:-}"
+      PXL_STORAGE_S3_SECRET_KEY: "${PXL_STORAGE_S3_SECRET_KEY:-}"
+      PXL_STORAGE_S3_USE_SSL: "${PXL_STORAGE_S3_USE_SSL:-true}"
+      PXL_STORAGE_S3_FORCE_PATH_STYLE: "${PXL_STORAGE_S3_FORCE_PATH_STYLE:-false}"
+      PXL_AUTH_JWT_SECRET: "${PXL_JWT_SECRET:?Set PXL_JWT_SECRET (min 32 chars)}"
+      PXL_AUTH_JWT_EXPIRY: "${PXL_JWT_EXPIRY:-15m}"
+      PXL_AUTH_REFRESH_EXPIRY: "${PXL_REFRESH_EXPIRY:-168h}"
+      PXL_AUTH_ADMIN_USERNAME: "${PXL_ADMIN_USERNAME:-admin}"
+      PXL_AUTH_ADMIN_PASSWORD: "${PXL_ADMIN_PASS:-}"
+      PXL_AUTH_ALLOW_ANONYMOUS: "${PXL_ALLOW_ANONYMOUS:-false}"
+      PXL_AUTH_ALLOW_REGISTRATION: "${PXL_ALLOW_REGISTRATION:-false}"
+      PXL_AUTH_DEFAULT_QUOTA_BYTES: "${PXL_DEFAULT_QUOTA_BYTES:-1073741824}"
+      PXL_AUTH_DEFAULT_QUOTA_IMAGES: "${PXL_DEFAULT_QUOTA_IMAGES:-5000}"
+      PXL_UPLOAD_MAX_SIZE: "${PXL_MAX_UPLOAD_SIZE:-52428800}"
+      PXL_UPLOAD_MAX_FILES: "${PXL_MAX_UPLOAD_FILES:-10}"
+      PXL_UPLOAD_MAX_PIXELS: "${PXL_MAX_PIXELS:-40000000}"
+      # Same volume as local storage: validated uploads are committed with an
+      # atomic rename instead of being copied a second time.
+      PXL_UPLOAD_TEMP_DIR: "/app/data/images/.tmp"
+      PXL_UPLOAD_MIN_FREE_BYTES: "${PXL_UPLOAD_MIN_FREE_BYTES:-1073741824}"
+      PXL_UPLOAD_ALLOWED_TYPES: "${PXL_UPLOAD_ALLOWED_TYPES:-image/jpeg,image/png,image/gif,image/webp}"
+      PXL_THUMB_ENABLED: "${PXL_THUMB_ENABLED:-true}"
+      PXL_THUMB_WORKERS: "${PXL_THUMB_WORKERS:-2}"
+      PXL_THUMB_SIZE: "${PXL_THUMB_SIZE:-300}"
+      PXL_THUMB_QUALITY: "${PXL_THUMB_QUALITY:-85}"
+      PXL_TRUSTED_PROXIES: "${PXL_TRUSTED_PROXIES:-}"
+      PXL_CORS_ORIGIN: "${PXL_CORS_ORIGIN:-}"
+      PXL_RATE_LIMIT_REQUESTS: "${PXL_RATE_LIMIT_REQUESTS:-60}"
+      PXL_PUBLIC_RATE_LIMIT_REQUESTS: "${PXL_PUBLIC_RATE_LIMIT_REQUESTS:-600}"
+      PXL_RATE_LIMIT_WINDOW: "${PXL_RATE_LIMIT_WINDOW:-1m}"
+      PXL_METRICS_ENABLED: "${PXL_METRICS_ENABLED:-true}"
+      PXL_METRICS_PORT: "${PXL_METRICS_PORT:-9090}"
+      PXL_LOG_LEVEL: "${PXL_LOG_LEVEL:-info}"
+      PXL_LOG_FORMAT: "${PXL_LOG_FORMAT:-json}"
+    volumes:
+      - pxl-data:/app/data
+    tmpfs:
+      - /tmp/pxl:noexec,nosuid,size=256m
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pxl-internal
+      - pxl-public
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  postgres:
+    image: postgres:16.14-alpine3.24
+    environment:
+      POSTGRES_DB: pxl
+      POSTGRES_USER: pxl
+      POSTGRES_PASSWORD: "${PXL_DB_PASS:?Set PXL_DB_PASS}"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - pxl-pgdata:/var/lib/postgresql/data
+    tmpfs:
+      - /run/postgresql:size=64m
+    networks:
+      - pxl-internal
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+        reservations:
+          memory: 64M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pxl"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  pxl-internal:
+    internal: true
+  pxl-public:
+
+volumes:
+  pxl-data:
+  pxl-pgdata:

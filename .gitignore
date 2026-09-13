@@ -1,0 +1,55 @@
+# Binaries
+/pxl
+/main
+/build/
+
+# Go
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Test
+coverage.out
+coverage.html
+
+# Environment
+.env
+*.env.local
+
+# Data
+/data/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# Keep project images
+!/PXL.png
+!web/static/favicon.png
+!/docs/
+!/docs/screenshots/
+!/docs/screenshots/*.webp
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log

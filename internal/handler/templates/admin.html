@@ -1,0 +1,443 @@
+{{define "admin.html"}}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PXL — Administration</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<script src="/static/pxl-session.js"></script>
+<style nonce="{{.Nonce}}">
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0f0f0f;color:#e0e0e0;min-height:100vh}
+a{color:#7c8aff;text-decoration:none}a:hover{text-decoration:underline}
+.nav{display:flex;align-items:center;gap:1.5rem;padding:.75rem 1.5rem;background:#1a1a1a;border-bottom:1px solid #333}
+.nav .logo{font-weight:700;font-size:1.2rem;color:#7c8aff}
+.nav a{color:#aaa;font-size:.9rem}.nav a:hover{color:#fff}
+.nav .right{margin-left:auto;display:flex;gap:1rem;align-items:center}
+.container{max-width:1200px;margin:0 auto;padding:1.5rem}
+.tabs{display:flex;gap:.5rem;margin-bottom:1.5rem;border-bottom:1px solid #333;padding-bottom:.5rem}
+.tab{padding:.5rem 1rem;cursor:pointer;border-radius:6px 6px 0 0;font-size:.9rem;color:#aaa;background:transparent;border:none}
+.tab:hover{color:#fff;background:#222}
+.tab.active{color:#7c8aff;border-bottom:2px solid #7c8aff;background:#1a1a2e}
+.card{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
+.card h3{margin-bottom:.75rem;color:#fff;font-size:1rem}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat{background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:1rem;text-align:center}
+.stat .value{font-size:1.8rem;font-weight:700;color:#7c8aff}
+.stat .label{font-size:.8rem;color:#888;margin-top:.25rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{padding:.6rem .75rem;text-align:left;border-bottom:1px solid #2a2a2a}
+th{color:#888;font-weight:600;font-size:.75rem;text-transform:uppercase}
+tr:hover{background:#1a1a2e}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.75rem;font-weight:600}
+.badge-admin{background:#7c8aff22;color:#7c8aff}
+.badge-user{background:#4caf5022;color:#4caf50}
+.badge-active{background:#4caf5022;color:#4caf50}
+.badge-inactive{background:#f4433622;color:#f44336}
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .8rem;border:1px solid #444;border-radius:6px;background:#222;color:#ddd;cursor:pointer;font-size:.8rem;transition:all .15s}
+.btn:hover{background:#333;border-color:#666}
+.btn-danger{border-color:#f44336;color:#f44336}.btn-danger:hover{background:#f4433622}
+.btn-primary{border-color:#7c8aff;color:#7c8aff}.btn-primary:hover{background:#7c8aff22}
+.btn-success{border-color:#4caf50;color:#4caf50}.btn-success:hover{background:#4caf5022}
+.input{background:#111;border:1px solid #333;border-radius:6px;padding:.4rem .6rem;color:#e0e0e0;font-size:.85rem;width:100%}
+.input:focus{outline:none;border-color:#7c8aff}
+select.input{appearance:auto}
+.pagination{display:flex;justify-content:center;gap:.5rem;margin-top:1rem}
+.toast{position:fixed;top:1rem;right:1rem;padding:.75rem 1.25rem;border-radius:8px;color:#fff;font-size:.85rem;z-index:9999;animation:slideIn .3s,fadeOut .3s 2.7s}
+.toast-success{background:#2e7d32}.toast-error{background:#c62828}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000;display:none}
+.modal{background:#1a1a1a;border:1px solid #444;border-radius:12px;padding:1.5rem;width:90%;max-width:450px}
+.modal h3{margin-bottom:1rem;color:#fff}
+.modal .form-group{margin-bottom:.75rem}
+.modal label{display:block;font-size:.8rem;color:#888;margin-bottom:.25rem}
+.modal .actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem}
+.quota-bar{height:6px;background:#333;border-radius:3px;overflow:hidden;margin-top:.25rem}
+.quota-fill{height:100%;background:#7c8aff;border-radius:3px;transition:width .3s}
+.empty{text-align:center;padding:2rem;color:#666}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="logo">PXL</a>
+  <a href="/">Upload</a>
+  <a href="/gallery">Galerie</a>
+  <a href="/admin" style="color:#7c8aff">Admin</a>
+  <div class="right">
+    <a href="/account">Mon compte</a>
+    <button class="btn" id="btn-logout">Déconnexion</button>
+  </div>
+</nav>
+
+<div class="container">
+  <h2 style="margin-bottom:1rem;color:#fff">Console d'administration</h2>
+
+  <div class="tabs" id="tabs-bar">
+    <button class="tab active" data-tab="dashboard">Tableau de bord</button>
+    <button class="tab" data-tab="users">Utilisateurs</button>
+    <button class="tab" data-tab="images">Images</button>
+    <button class="tab" data-tab="audit">Audit</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="tab-dashboard">
+    <div class="stats-grid" id="stats-grid"></div>
+  </div>
+
+  <!-- Users -->
+  <div id="tab-users" style="display:none">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3>Gestion des utilisateurs</h3>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <input class="input" type="text" id="users-search" placeholder="Rechercher par nom ou email…" style="width:260px">
+          <button class="btn btn-primary" id="btn-create-user">+ Créer un utilisateur</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Quota</th><th>Images</th><th>Inscrit le</th><th>Actions</th></tr></thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+      <div class="pagination" id="users-pagination"></div>
+    </div>
+  </div>
+
+  <!-- Images -->
+  <div id="tab-images" style="display:none">
+    <div class="card">
+      <h3>Toutes les images</h3>
+      <table>
+        <thead><tr><th>Aperçu</th><th>Nom</th><th>Taille</th><th>Vues</th><th>Créée le</th><th>Actions</th></tr></thead>
+        <tbody id="images-tbody"></tbody>
+      </table>
+      <div class="pagination" id="images-pagination"></div>
+    </div>
+  </div>
+
+  <!-- Audit -->
+  <div id="tab-audit" style="display:none">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3>Logs d'audit</h3>
+        <select class="input" style="width:auto" id="audit-filter">
+          <option value="">Toutes les actions</option>
+          <option value="auth.login">Connexions</option>
+          <option value="auth.login_failed">Échecs de connexion</option>
+          <option value="auth.register">Inscriptions</option>
+          <option value="auth.password_change">Changements de mot de passe</option>
+          <option value="image.upload">Uploads</option>
+          <option value="image.delete">Suppressions</option>
+          <option value="admin.user.edit">Modifications admin</option>
+          <option value="admin.user.suspend">Suspensions</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr><th>Date</th><th>Acteur</th><th>Action</th><th>Cible</th><th>IP</th><th>Détails</th></tr></thead>
+        <tbody id="audit-tbody"></tbody>
+      </table>
+      <div class="pagination" id="audit-pagination"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <h3>Modifier l'utilisateur</h3>
+    <input type="hidden" id="edit-uid">
+    <div class="form-group">
+      <label>Rôle</label>
+      <select class="input" id="edit-role"><option value="user">user</option><option value="admin">admin</option></select>
+    </div>
+    <div class="form-group">
+      <label>Statut</label>
+      <select class="input" id="edit-active"><option value="true">Actif</option><option value="false">Suspendu</option></select>
+    </div>
+    <div class="form-group">
+      <label>Quota stockage</label>
+      <div style="display:flex;gap:.4rem">
+        <input class="input" type="number" id="edit-quota-bytes" style="flex:1" step="any" min="0">
+        <select class="input" id="edit-quota-unit" style="width:auto;flex:0 0 70px">
+          <option value="1024">Ko</option>
+          <option value="1048576" selected>Mo</option>
+          <option value="1073741824">Go</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Quota images</label>
+      <input class="input" type="number" id="edit-quota-images">
+    </div>
+    <div class="actions">
+      <button class="btn" id="btn-edit-cancel">Annuler</button>
+      <button class="btn btn-primary" id="btn-edit-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal-overlay" id="create-modal">
+  <div class="modal">
+    <h3>Créer un utilisateur</h3>
+    <div class="form-group"><label>Nom d'utilisateur</label><input class="input" id="new-username"></div>
+    <div class="form-group"><label>Email</label><input class="input" type="email" id="new-email"></div>
+    <div class="form-group"><label>Mot de passe (min. 8 car.)</label><input class="input" type="password" id="new-password"></div>
+    <div class="form-group"><label>Rôle</label><select class="input" id="new-role"><option value="user">user</option><option value="admin">admin</option></select></div>
+    <div class="actions">
+      <button class="btn" id="btn-create-cancel">Annuler</button>
+      <button class="btn btn-primary" id="btn-create-submit">Créer</button>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{.Nonce}}">
+const BASE = '{{.BaseURL}}';
+function api(path, opts={}){
+  return PXLSession.request(BASE+'/api/v1'+path, {
+    ...opts,
+    headers: {'Content-Type':'application/json',...(opts.headers||{})}
+  }).then(r=>{
+    if(r.status===401) location.href='/login';
+    return r;
+  });
+}
+function toast(msg,type='success'){
+  const d=document.createElement('div');d.className='toast toast-'+type;d.textContent=msg;
+  document.body.appendChild(d);setTimeout(()=>d.remove(),3000);
+}
+function logout(){PXLSession.logout().then(()=>location.href='/login').catch(()=>toast('Déconnexion impossible, réessayez','error'))}
+function fmtBytes(b){if(b<1024)return b+' o';if(b<1048576)return(b/1024).toFixed(1)+' Ko';if(b<1073741824)return(b/1048576).toFixed(1)+' Mo';return(b/1073741824).toFixed(2)+' Go'}
+function fmtDate(s){return new Date(s).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function closeModal(id){document.getElementById(id).style.display='none';}
+function esc(s){return PXLSession.escapeHTML(s);}
+
+// ── Static event listeners ──
+document.getElementById('btn-logout').addEventListener('click', logout);
+document.getElementById('btn-create-user').addEventListener('click', function(){document.getElementById('create-modal').style.display='flex';});
+document.getElementById('btn-edit-cancel').addEventListener('click', function(){closeModal('edit-modal');});
+document.getElementById('btn-edit-save').addEventListener('click', saveUser);
+document.getElementById('btn-create-cancel').addEventListener('click', function(){closeModal('create-modal');});
+document.getElementById('btn-create-submit').addEventListener('click', createUser);
+document.getElementById('audit-filter').addEventListener('change', function(){loadAudit(1);});
+
+// ── User search with debounce ──
+let searchTimeout=null;
+document.getElementById('users-search').addEventListener('input', function(){
+  clearTimeout(searchTimeout);
+  searchTimeout=setTimeout(function(){loadUsers(1);},300);
+});
+
+// ── Tabs ──
+document.getElementById('tabs-bar').addEventListener('click', function(e){
+  const btn = e.target.closest('[data-tab]');
+  if(!btn) return;
+  const name = btn.dataset.tab;
+  document.querySelectorAll('[id^="tab-"]').forEach(e=>e.style.display='none');
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('tab-'+name).style.display='block';
+  btn.classList.add('active');
+  if(name==='dashboard')loadStats();
+  if(name==='users')loadUsers(1);
+  if(name==='images')loadImages(1);
+  if(name==='audit')loadAudit(1);
+});
+
+// ── Dashboard ──
+async function loadStats(){
+  const r=await api('/admin/stats');
+  if(!r.ok)return;
+  const s=await r.json();
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat"><div class="value">${s.total_users}</div><div class="label">Utilisateurs</div></div>
+    <div class="stat"><div class="value">${s.active_users}</div><div class="label">Actifs</div></div>
+    <div class="stat"><div class="value">${s.total_images}</div><div class="label">Images</div></div>
+    <div class="stat"><div class="value">${fmtBytes(s.total_bytes)}</div><div class="label">Stockage utilisé</div></div>
+    <div class="stat"><div class="value">${s.recent_uploads_24h}</div><div class="label">Uploads (24h)</div></div>
+    <div class="stat"><div class="value">${s.total_albums}</div><div class="label">Albums</div></div>
+    <div class="stat"><div class="value">${s.storage_backend}</div><div class="label">Backend</div></div>
+  `;
+}
+
+// ── Users (event delegation) ──
+let usersPage=1;
+document.getElementById('users-tbody').addEventListener('click', function(e){
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+  if(action==='edit') editUser(btn.dataset.id, btn.dataset.role, btn.dataset.active==='true', parseInt(btn.dataset.qb), parseInt(btn.dataset.qi));
+  if(action==='delete') deleteUser(btn.dataset.id, btn.dataset.name);
+});
+document.getElementById('users-pagination').addEventListener('click', function(e){
+  const btn = e.target.closest('[data-page]');
+  if(btn) loadUsers(parseInt(btn.dataset.page));
+});
+
+async function loadUsers(page){
+  usersPage=page;
+  const q=document.getElementById('users-search').value.trim();
+  let url='/admin/users?page='+page+'&per_page=20';
+  if(q)url+='&q='+encodeURIComponent(q);
+  const r=await api(url);
+  if(!r.ok)return;
+  const d=await r.json();
+  const tb=document.getElementById('users-tbody');
+  if(!d.users||d.users.length===0){tb.innerHTML='<tr><td colspan="8" class="empty">Aucun utilisateur</td></tr>';return;}
+  tb.innerHTML=d.users.map(u=>`<tr>
+    <td><strong>${esc(u.username)}</strong></td>
+    <td>${esc(u.email)}</td>
+    <td><span class="badge badge-${u.role}">${u.role}</span></td>
+    <td><span class="badge badge-${u.is_active?'active':'inactive'}">${u.is_active?'Actif':'Suspendu'}</span></td>
+    <td><div style="font-size:.8rem">${fmtBytes(u.used_bytes)} / ${fmtBytes(u.quota_bytes)}</div>
+      <div class="quota-bar"><div class="quota-fill" style="width:${Math.min(100,u.used_bytes/u.quota_bytes*100)}%"></div></div></td>
+    <td>${u.used_images} / ${u.quota_images}</td>
+    <td style="font-size:.8rem">${fmtDate(u.created_at)}</td>
+    <td>
+      <button class="btn" data-action="edit" data-id="${u.id}" data-role="${u.role}" data-active="${u.is_active}" data-qb="${u.quota_bytes}" data-qi="${u.quota_images}">Modifier</button>
+      <button class="btn btn-danger" data-action="delete" data-id="${u.id}" data-name="${esc(u.username)}">Supprimer</button>
+    </td>
+  </tr>`).join('');
+  renderPagination('users-pagination',d.page,d.total_pages,'users');
+}
+
+function bestUnit(bytes){
+  if(bytes>=1073741824 && bytes%1073741824===0) return {val:bytes/1073741824,unit:'1073741824'};
+  if(bytes>=1048576 && bytes%1048576===0) return {val:bytes/1048576,unit:'1048576'};
+  if(bytes>=1024 && bytes%1024===0) return {val:bytes/1024,unit:'1024'};
+  if(bytes>=1073741824) return {val:+(bytes/1073741824).toFixed(2),unit:'1073741824'};
+  if(bytes>=1048576) return {val:+(bytes/1048576).toFixed(2),unit:'1048576'};
+  return {val:+(bytes/1024).toFixed(2),unit:'1024'};
+}
+
+function editUser(id,role,active,qb,qi){
+  document.getElementById('edit-uid').value=id;
+  document.getElementById('edit-role').value=role;
+  document.getElementById('edit-active').value=String(active);
+  const best=bestUnit(qb);
+  document.getElementById('edit-quota-bytes').value=best.val;
+  document.getElementById('edit-quota-unit').value=best.unit;
+  document.getElementById('edit-quota-images').value=qi;
+  document.getElementById('edit-modal').style.display='flex';
+}
+
+async function saveUser(){
+  const id=document.getElementById('edit-uid').value;
+  const rawVal=parseFloat(document.getElementById('edit-quota-bytes').value);
+  const unit=parseInt(document.getElementById('edit-quota-unit').value);
+  const quotaBytes=Math.round(rawVal*unit);
+  const body={
+    role:document.getElementById('edit-role').value,
+    is_active:document.getElementById('edit-active').value==='true',
+    quota_bytes:quotaBytes,
+    quota_images:parseInt(document.getElementById('edit-quota-images').value)
+  };
+  const r=await api('/admin/users/'+id,{method:'PATCH',body:JSON.stringify(body)});
+  if(r.ok){toast('Utilisateur mis à jour');closeModal('edit-modal');loadUsers(usersPage);}
+  else{const e=await r.json();toast(e.error||'Erreur','error');}
+}
+
+async function deleteUser(id,name){
+  if(!confirm('Supprimer définitivement '+name+' ? Ses images resteront mais seront orphelines.'))return;
+  const r=await api('/admin/users/'+id,{method:'DELETE'});
+  if(r.ok){toast('Utilisateur supprimé');loadUsers(usersPage);}
+  else{toast('Erreur lors de la suppression','error');}
+}
+
+async function createUser(){
+  const body={
+    username:document.getElementById('new-username').value,
+    email:document.getElementById('new-email').value,
+    password:document.getElementById('new-password').value,
+    role:document.getElementById('new-role').value
+  };
+  if(!body.username||!body.email||!body.password){toast('Tous les champs sont requis','error');return;}
+  const r=await api('/admin/users',{method:'POST',body:JSON.stringify(body)});
+  if(r.ok||r.status===201){toast('Utilisateur créé');closeModal('create-modal');loadUsers(usersPage);}
+  else{const e=await r.json();toast(e.error||'Erreur','error');}
+}
+
+// ── Images (event delegation) ──
+let imagesPage=1;
+document.getElementById('images-tbody').addEventListener('click', function(e){
+  const btn = e.target.closest('[data-action="force-delete"]');
+  if(btn) forceDeleteImage(btn.dataset.sid);
+});
+document.getElementById('images-pagination').addEventListener('click', function(e){
+  const btn = e.target.closest('[data-page]');
+  if(btn) loadImages(parseInt(btn.dataset.page));
+});
+
+async function loadImages(page){
+  imagesPage=page;
+  const r=await api('/admin/images?page='+page+'&per_page=20');
+  if(!r.ok)return;
+  const d=await r.json();
+  const tb=document.getElementById('images-tbody');
+  if(!d.images||d.images.length===0){tb.innerHTML='<tr><td colspan="6" class="empty">Aucune image</td></tr>';return;}
+  tb.innerHTML=d.images.map(i=>`<tr>
+    <td><a href="${i.direct_url}" target="_blank"><img src="${i.thumb_url}" style="height:40px;border-radius:4px" loading="lazy" alt=""></a></td>
+    <td><a href="${i.url}" target="_blank">${esc(i.original_name)}</a><br><span style="font-size:.75rem;color:#666">${i.short_id}</span></td>
+    <td>${fmtBytes(i.size_bytes)}</td>
+    <td>${i.view_count}</td>
+    <td style="font-size:.8rem">${fmtDate(i.created_at)}</td>
+    <td><button class="btn btn-danger" data-action="force-delete" data-sid="${i.short_id}">Supprimer</button></td>
+  </tr>`).join('');
+  renderPagination('images-pagination',d.page,d.total_pages,'images');
+}
+
+async function forceDeleteImage(shortID){
+  if(!confirm('Supprimer définitivement cette image ?'))return;
+  const r=await api('/admin/images/'+shortID,{method:'DELETE'});
+  if(r.ok){toast('Image supprimée');loadImages(imagesPage);}
+  else{toast('Erreur','error');}
+}
+
+// ── Audit ──
+let auditPage=1;
+document.getElementById('audit-pagination').addEventListener('click', function(e){
+  const btn = e.target.closest('[data-page]');
+  if(btn) loadAudit(parseInt(btn.dataset.page));
+});
+
+async function loadAudit(page){
+  auditPage=page;
+  const filter=document.getElementById('audit-filter').value;
+  let url='/admin/audit?page='+page+'&per_page=50';
+  if(filter)url+='&action='+encodeURIComponent(filter);
+  const r=await api(url);
+  if(!r.ok)return;
+  const d=await r.json();
+  const tb=document.getElementById('audit-tbody');
+  if(!d.logs||d.logs.length===0){tb.innerHTML='<tr><td colspan="6" class="empty">Aucun log</td></tr>';return;}
+  tb.innerHTML=d.logs.map(l=>`<tr>
+    <td style="font-size:.8rem;white-space:nowrap">${fmtDate(l.created_at)}</td>
+    <td>${esc(l.actor_name||'—')}</td>
+    <td><span class="badge" style="background:#333">${esc(l.action)}</span></td>
+    <td>${esc(l.target_type)} ${esc(l.target_id).substring(0,8)}</td>
+    <td style="font-size:.8rem">${esc(l.ip_address)}</td>
+    <td style="font-size:.75rem;max-width:200px;overflow:hidden;text-overflow:ellipsis">${esc(l.details)}</td>
+  </tr>`).join('');
+  renderPagination('audit-pagination',d.page,d.total_pages,'audit');
+}
+
+// ── Pagination (no inline handlers) ──
+const paginationLoaders = {users:loadUsers, images:loadImages, audit:loadAudit};
+function renderPagination(elID,current,total,section){
+  const el=document.getElementById(elID);
+  if(total<=1){el.innerHTML='';return;}
+  let html='';
+  if(current>1)html+=`<button class="btn" data-page="${current-1}">←</button>`;
+  for(let i=Math.max(1,current-2);i<=Math.min(total,current+2);i++){
+    html+=`<button class="btn${i===current?' btn-primary':''}" data-page="${i}">${i}</button>`;
+  }
+  if(current<total)html+=`<button class="btn" data-page="${current+1}">→</button>`;
+  el.innerHTML=html;
+}
+
+// Init
+loadStats();
+</script>
+</body>
+</html>
+{{end}}

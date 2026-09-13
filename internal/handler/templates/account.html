@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mon compte — PXL</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<script src="/static/pxl-session.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.5rem;background:#161b22;border-bottom:1px solid #21262d}
+.navbar .logo{color:#58a6ff;text-decoration:none;font-weight:700;font-size:1.2rem}
+.navbar .nav-links{display:flex;gap:1rem;align-items:center}
+.navbar .nav-links a{color:#8b949e;text-decoration:none;font-size:.9rem;transition:color .2s}
+.navbar .nav-links a:hover{color:#c9d1d9}
+.navbar .nav-links a.active{color:#58a6ff}
+.nav-user{display:flex;align-items:center;gap:.7rem}
+.nav-user .username{color:#c9d1d9;font-size:.85rem;font-weight:500}
+.btn-nav{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:.35rem .7rem;border-radius:6px;font-size:.8rem;cursor:pointer;text-decoration:none;transition:all .2s}
+.btn-nav:hover{background:#30363d;border-color:#484f58}
+.container{max-width:700px;margin:2rem auto;padding:1.5rem}
+h2{font-size:1.5rem;margin-bottom:1.5rem;color:#c9d1d9}
+.card{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+.card h3{font-size:1rem;color:#c9d1d9;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #21262d}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid #21262d1a}
+.info-row:last-child{border-bottom:none}
+.info-label{color:#8b949e;font-size:.85rem}
+.info-value{color:#c9d1d9;font-size:.85rem;font-weight:500}
+.quota-bar{width:200px;height:6px;background:#21262d;border-radius:3px;overflow:hidden;margin-top:.3rem}
+.quota-fill{height:100%;background:#58a6ff;transition:width .3s}
+.quota-fill.warn{background:#d29922}
+.quota-fill.danger{background:#da3633}
+.btn{background:#238636;color:#fff;border:none;padding:.5rem 1rem;border-radius:6px;font-size:.85rem;cursor:pointer;transition:background .2s}
+.btn:hover{background:#2ea043}
+.btn-outline{background:transparent;color:#c9d1d9;border:1px solid #30363d}
+.btn-outline:hover{background:#21262d}
+.btn-danger{background:#da3633}.btn-danger:hover{background:#f85149}
+.api-key-display{background:#0d1117;border:1px solid #30363d;color:#3fb950;padding:.5rem .8rem;border-radius:6px;font-size:.8rem;font-family:monospace;word-break:break-all;margin:.5rem 0;display:none}
+.toast{position:fixed;bottom:2rem;right:2rem;background:#238636;color:#fff;padding:.7rem 1.2rem;border-radius:8px;font-size:.85rem;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.loading{text-align:center;padding:2rem;color:#8b949e}
+.error-msg{background:#da36331a;border:1px solid #da363355;color:#f85149;padding:.6rem .8rem;border-radius:6px;font-size:.85rem;margin-bottom:1rem;display:none}
+.success-msg{background:#2386361a;border:1px solid #23863655;color:#3fb950;padding:.6rem .8rem;border-radius:6px;font-size:.85rem;margin-bottom:1rem;display:none}
+.form-group{margin-bottom:.75rem}
+.form-group label{display:block;color:#8b949e;font-size:.8rem;margin-bottom:.3rem}
+.pwd-input{width:100%;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:.5rem .7rem;border-radius:6px;font-size:.85rem}
+.pwd-input:focus{outline:none;border-color:#58a6ff}
+footer{text-align:center;padding:1rem;color:#484f58;font-size:.8rem;margin-top:auto}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a class="logo" href="/">PXL</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<div class="container">
+  <h2>Mon compte</h2>
+
+  <div class="loading" id="loading">Chargement...</div>
+
+  <div id="accountContent" style="display:none">
+    <!-- Profile info -->
+    <div class="card">
+      <h3>Profil</h3>
+      <div class="info-row">
+        <span class="info-label">Nom d'utilisateur</span>
+        <span class="info-value" id="infoUsername">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Email</span>
+        <span class="info-value" id="infoEmail">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Rôle</span>
+        <span class="info-value" id="infoRole">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Membre depuis</span>
+        <span class="info-value" id="infoCreated">—</span>
+      </div>
+    </div>
+
+    <!-- Storage quota -->
+    <div class="card">
+      <h3>Espace de stockage</h3>
+      <div class="info-row">
+        <span class="info-label">Utilisé</span>
+        <div>
+          <span class="info-value" id="infoUsed">—</span>
+          <div class="quota-bar"><div class="quota-fill" id="quotaFill"></div></div>
+        </div>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Quota total</span>
+        <span class="info-value" id="infoQuota">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Images</span>
+        <div>
+          <span class="info-value" id="infoImages">—</span>
+          <div class="quota-bar"><div class="quota-fill" id="quotaImagesFill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="card">
+      <h3>Changer le mot de passe</h3>
+      <div id="pwdError" class="error-msg"></div>
+      <div id="pwdSuccess" class="success-msg"></div>
+      <div class="form-group">
+        <label>Mot de passe actuel</label>
+        <input class="pwd-input" type="password" id="currentPwd" autocomplete="current-password">
+      </div>
+      <div class="form-group">
+        <label>Nouveau mot de passe (min. 8 car.)</label>
+        <input class="pwd-input" type="password" id="newPwd" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Confirmer le nouveau mot de passe</label>
+        <input class="pwd-input" type="password" id="newPwdConfirm" autocomplete="new-password">
+      </div>
+      <button class="btn" id="changePwdBtn" style="margin-top:.5rem">Modifier le mot de passe</button>
+    </div>
+
+    <!-- API Key -->
+    <div class="card">
+      <h3>Clé API</h3>
+      <p style="color:#8b949e;font-size:.85rem;margin-bottom:.8rem">
+        Utilisez une clé API pour uploader des images depuis un script ou une application tierce.
+      </p>
+      <div class="info-row">
+        <span class="info-label">Préfixe actuel</span>
+        <span class="info-value" id="infoApiPrefix">Aucune clé</span>
+      </div>
+      <div class="api-key-display" id="apiKeyDisplay"></div>
+      <div style="margin-top:.8rem;display:flex;gap:.5rem">
+        <button class="btn" id="genApiKeyBtn">Générer une nouvelle clé</button>
+        <button class="btn btn-outline" id="copyApiKeyBtn" style="display:none">Copier la clé</button>
+      </div>
+      <p style="color:#d29922;font-size:.75rem;margin-top:.5rem;display:none" id="apiKeyWarning">
+        ⚠ Copiez cette clé maintenant, elle ne sera plus affichée après.
+      </p>
+    </div>
+
+    <!-- Usage hint -->
+    <div class="card">
+      <h3>Upload via cURL</h3>
+      <pre style="background:#0d1117;border:1px solid #30363d;padding:.8rem;border-radius:6px;font-size:.8rem;color:#8b949e;overflow-x:auto;white-space:pre-wrap">curl -X POST {{.BaseURL}}/api/v1/upload \
+  -H "X-API-Key: ${PXL_API_KEY}" \
+  -F "file=@mon_image.png"</pre>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copié !</div>
+<footer>PXL — Hébergement d'images auto-hébergé</footer>
+
+<script nonce="{{.Nonce}}">
+const BASE = '{{.BaseURL}}';
+
+function esc(value) {
+  const node = document.createElement('div');
+  node.textContent = value == null ? '' : String(value);
+  return node.innerHTML;
+}
+
+// ── Navbar ──
+async function updateNav() {
+  const nav = document.getElementById('navLinks');
+  const user = await PXLSession.currentUser();
+  let h = '<a href="/">Upload</a>';
+  if (user) {
+    h += '<a href="/gallery">Mes images</a>';
+    h += '<a href="/account" class="active">Mon compte</a>';
+    if (user.role === 'admin') h += '<a href="/admin">Admin</a>';
+    h += '<span class="nav-user"><span class="username">' + esc(user.username) + '</span>';
+    h += '<button class="btn-nav" id="btn-logout">Déconnexion</button></span>';
+  } else {
+    h += '<a href="/login" class="btn-nav">Connexion</a>';
+  }
+  nav.innerHTML = h;
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+}
+async function logout() {
+  await PXLSession.logout();
+  window.location.href = '/';
+}
+updateNav();
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg || 'Copié !';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' o';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' Ko';
+  if (b < 1073741824) return (b/1048576).toFixed(1) + ' Mo';
+  return (b/1073741824).toFixed(2) + ' Go';
+}
+
+// Load user info from API
+async function loadProfile() {
+  try {
+    const res = await PXLSession.request(BASE + '/api/v1/auth/me');
+    if (!res.ok) {
+      if (res.status === 401) window.location.href = '/login';
+      return;
+    }
+    const user = await res.json();
+
+    document.getElementById('infoUsername').textContent = user.username;
+    document.getElementById('infoEmail').textContent = user.email;
+    document.getElementById('infoRole').textContent = user.role === 'admin' ? 'Administrateur' : 'Utilisateur';
+    document.getElementById('infoCreated').textContent = new Date(user.created_at).toLocaleDateString('fr-FR', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    document.getElementById('infoUsed').textContent = formatBytes(user.used_bytes) + ' / ' + formatBytes(user.quota_bytes);
+    document.getElementById('infoQuota').textContent = formatBytes(user.quota_bytes);
+
+    const pct = user.quota_bytes > 0 ? (user.used_bytes / user.quota_bytes * 100) : 0;
+    const fill = document.getElementById('quotaFill');
+    fill.style.width = Math.min(pct, 100) + '%';
+    if (pct > 90) fill.classList.add('danger');
+    else if (pct > 70) fill.classList.add('warn');
+
+    // Image quota
+    const imgUsed = user.used_images || 0;
+    const imgQuota = user.quota_images || 0;
+    document.getElementById('infoImages').textContent = imgUsed + ' / ' + imgQuota;
+    const imgFill = document.getElementById('quotaImagesFill');
+    const imgPct = imgQuota > 0 ? (imgUsed / imgQuota * 100) : 0;
+    imgFill.style.width = Math.min(imgPct, 100) + '%';
+    if (imgPct > 90) imgFill.classList.add('danger');
+    else if (imgPct > 70) imgFill.classList.add('warn');
+
+    if (user.api_key_prefix) {
+      document.getElementById('infoApiPrefix').textContent = user.api_key_prefix + '...';
+    }
+
+    // Update localStorage with fresh data
+    localStorage.setItem('pxl_user', JSON.stringify(user));
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('accountContent').style.display = 'block';
+  } catch {
+    document.getElementById('loading').textContent = 'Erreur de chargement';
+  }
+}
+
+loadProfile();
+
+// Generate API key
+document.getElementById('genApiKeyBtn').addEventListener('click', async () => {
+  if (!confirm('Générer une nouvelle clé API ? L\'ancienne sera invalidée.')) return;
+  try {
+    const res = await PXLSession.request(BASE + '/api/v1/auth/apikey', {method: 'POST'});
+    if (!res.ok) { showToast('Erreur'); return; }
+    const data = await res.json();
+    const display = document.getElementById('apiKeyDisplay');
+    display.textContent = data.api_key;
+    display.style.display = 'block';
+    document.getElementById('copyApiKeyBtn').style.display = 'inline-block';
+    document.getElementById('apiKeyWarning').style.display = 'block';
+    document.getElementById('infoApiPrefix').textContent = data.api_key.substring(0, 11) + '...';
+    showToast('Clé API générée');
+  } catch {
+    showToast('Erreur réseau');
+  }
+});
+
+document.getElementById('copyApiKeyBtn').addEventListener('click', () => {
+  const key = document.getElementById('apiKeyDisplay').textContent;
+  navigator.clipboard.writeText(key);
+  showToast('Clé API copiée');
+});
+
+// Change Password
+document.getElementById('changePwdBtn').addEventListener('click', async () => {
+  const pwdErr = document.getElementById('pwdError');
+  const pwdOk = document.getElementById('pwdSuccess');
+  pwdErr.style.display = 'none';
+  pwdOk.style.display = 'none';
+
+  const current = document.getElementById('currentPwd').value;
+  const newPwd = document.getElementById('newPwd').value;
+  const confirm = document.getElementById('newPwdConfirm').value;
+
+  if (!current || !newPwd) { pwdErr.textContent = 'Tous les champs sont requis'; pwdErr.style.display = 'block'; return; }
+  if (newPwd.length < 8) { pwdErr.textContent = 'Le nouveau mot de passe doit faire au moins 8 caractères'; pwdErr.style.display = 'block'; return; }
+  if (newPwd !== confirm) { pwdErr.textContent = 'Les mots de passe ne correspondent pas'; pwdErr.style.display = 'block'; return; }
+
+  try {
+    const res = await PXLSession.request(BASE + '/api/v1/auth/password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({old_password: current, new_password: newPwd})
+    });
+    if (res.ok) {
+      pwdOk.textContent = 'Mot de passe modifié. Sessions et clé API révoquées. Reconnectez-vous.';
+	  localStorage.removeItem('pxl_user');
+      pwdOk.style.display = 'block';
+      document.getElementById('currentPwd').value = '';
+      document.getElementById('newPwd').value = '';
+      document.getElementById('newPwdConfirm').value = '';
+    } else {
+      const data = await res.json();
+      pwdErr.textContent = data.error || 'Erreur lors du changement';
+      pwdErr.style.display = 'block';
+    }
+  } catch {
+    pwdErr.textContent = 'Erreur réseau';
+    pwdErr.style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
