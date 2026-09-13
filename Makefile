@@ -5,8 +5,9 @@ APP_NAME     := pxl
 BUILD_DIR    := ./build
 MAIN_PKG     := ./cmd/server
 GO           := go
-GOFLAGS      := -ldflags="-s -w"
 VERSION      ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+BUILD_TIME   ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS      := -s -w -X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME)
 
 # Cross-compilation targets
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
@@ -15,7 +16,7 @@ PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 
 build:
 	@echo ">> Building $(APP_NAME)..."
-	$(GO) build $(GOFLAGS) -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PKG)
+	$(GO) build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PKG)
 
 run: build
 	$(BUILD_DIR)/$(APP_NAME)
@@ -66,7 +67,7 @@ release: clean
 		$(eval SUFFIX := $(if $(filter windows,$(GOOS)),.exe,)) \
 		$(eval OUT    := $(BUILD_DIR)/$(APP_NAME)-$(VERSION)-$(GOOS)-$(GOARCH)$(SUFFIX)) \
 		echo "  → $(GOOS)/$(GOARCH)" && \
-		CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build $(GOFLAGS) -o $(OUT) $(MAIN_PKG) && \
+		CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(MAIN_PKG) && \
 	) true
 	@echo ">> Done. Binaries in $(BUILD_DIR)/"
 	@ls -lh $(BUILD_DIR)/
