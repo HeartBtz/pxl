@@ -154,6 +154,9 @@ node --test web/*.test.cjs
 docker compose build
 ```
 
+`make build` embeds the Git revision and UTC build time; verify a release
+binary with `./build/pxl --version`.
+
 Some repository integration tests require `PXL_TEST_DATABASE_URL` and skip when
 it is absent.
 
